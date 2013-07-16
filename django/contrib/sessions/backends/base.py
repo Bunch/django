@@ -1,4 +1,5 @@
 import base64
+import logging
 import time
 from datetime import datetime, timedelta
 try:
@@ -12,6 +13,8 @@ from django.utils.crypto import constant_time_compare
 from django.utils.crypto import get_random_string
 from django.utils.crypto import salted_hmac
 from django.utils import timezone
+
+debug_log = logging.getLogger('bunch.login_debug')
 
 class CreateError(Exception):
     """
@@ -39,6 +42,7 @@ class SessionBase(object):
         return self._session[key]
 
     def __setitem__(self, key, value):
+        debug_log.debug('SETTING %s to %s FOR SESSION %s' % (key, str(value), self._session_key))
         self._session[key] = value
         self.modified = True
 
@@ -239,6 +243,7 @@ class SessionBase(object):
         data = self._session_cache
         key = self.session_key
         self.create()
+        debug_log.debug('CYCLING SESSION FROM KEY %s TO %s' % (key, self._session_key))
         self._session_cache = data
         self.delete(key)
 

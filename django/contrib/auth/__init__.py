@@ -1,3 +1,4 @@
+import logging
 from warnings import warn
 from django.core.exceptions import ImproperlyConfigured
 from django.utils.importlib import import_module
@@ -6,6 +7,8 @@ from django.contrib.auth.signals import user_logged_in, user_logged_out
 SESSION_KEY = '_auth_user_id'
 BACKEND_SESSION_KEY = '_auth_user_backend'
 REDIRECT_FIELD_NAME = 'next'
+
+debug_log = logging.getLogger('bunch.login_debug')
 
 def load_backend(path):
     i = path.rfind('.')
@@ -50,6 +53,7 @@ def authenticate(**credentials):
             continue
         # Annotate the user object with the path of the backend.
         user.backend = "%s.%s" % (backend.__module__, backend.__class__.__name__)
+        debug_log.debug('USER AUTHENTICATED WITH BACKENDS %s' % user.backend)
         return user
 
 def login(request, user):
@@ -71,8 +75,10 @@ def login(request, user):
         request.session.cycle_key()
     request.session[SESSION_KEY] = user.id
     request.session[BACKEND_SESSION_KEY] = user.backend
+    debug_log.debug('LOGGING IN USER %s WITH BACKEND %s' % (user.id, user.backend))
     if hasattr(request, 'user'):
         request.user = user
+
     user_logged_in.send(sender=user.__class__, request=request, user=user)
 
 def logout(request):
@@ -99,6 +105,7 @@ def get_user(request):
         backend_path = request.session[BACKEND_SESSION_KEY]
         backend = load_backend(backend_path)
         user = backend.get_user(user_id) or AnonymousUser()
-    except KeyError:
+    except KeyError, e:
+        debug_log.debug('NO USER :( % s' % e.args)
         user = AnonymousUser()
     return user
