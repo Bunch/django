@@ -1,6 +1,7 @@
 from __future__ import absolute_import
 
 import datetime
+import logging
 import os
 import re
 import sys
@@ -24,6 +25,8 @@ except ImportError:
     except ImportError:
         # Python 2.5. Works on Python 2.6 but raises PendingDeprecationWarning
         from cgi import parse_qsl
+
+debug_log = logging.getLogger('bunch.login_debug')
 
 import Cookie
 # httponly support exists in Python 2.6's Cookie library,
@@ -196,6 +199,18 @@ class HttpRequest(object):
         self.path_info = ''
         self.method = None
         self._post_parse_error = False
+
+    def __setattr__(self, name, value):
+        if name == 'user':
+            import traceback
+            from cStringIO import StringIO
+            debug_log.debug('SETTNG USER TO %s' % str(value))
+            s = StringIO()
+            traceback.print_stack(limit=5, file=s)
+            s.reset()
+            debug_log.debug(s.read())
+
+        return object.__setattr__(self, name, value)
 
     def __repr__(self):
         return build_request_repr(self)
